@@ -1,0 +1,199 @@
+name: build-nvidia-kmods
+on:
+  schedule:
+    - cron: '5 2 * * *'  # 2am-ish UTC everyday (timed against official fedora container pushes)
+  pull_request:
+    branches:
+      - main
+      - testing
+  push:
+    branches:
+      - main
+      - testing
+env:
+  IMAGE_BASE_NAME: nvidia-kmod
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+  KERNEL_NAME: kernel-cachyos
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.fedora_version }}
+  cancel-in-progress: true
+
+jobs:
+  build_nvidia_kmods:
+    name: akmods
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        fedora_version: [40]
+        cfile_suffix:
+          - nvidia
+          - nvidia-open
+
+    steps:
+      # Checkout push-to-registry action GitHub repository
+      - name: Checkout Push to Registry action
+        uses: actions/checkout@v4
+
+      - name: Matrix Variables
+        shell: bash
+        run: |
+          echo "IMAGE_NAME=${{ env.IMAGE_BASE_NAME }}-${{ matrix.cfile_suffix }}" >> $GITHUB_ENV
+          export BUILDER_IMAGE=quay.io/fedora/fedora
+          echo "BUILDER_IMAGE=${BUILDER_IMAGE}" >> $GITHUB_ENV
+          echo "FQ_BUILDER_IMAGE=${BUILDER_IMAGE}:${{ matrix.fedora_version }}" >> $GITHUB_ENV
+
+      - name: AppArmor Disable
+        run: |
+          set -x
+          systemctl status apparmor
+          sudo systemctl stop apparmor
+          systemctl status apparmor || true
+
+      - name: Pull build images
+        uses: Wandalen/wretry.action@v3.5.0
+        with:
+          attempt_limit: 3
+          attempt_delay: 15000
+          command: |
+            # pull the base image used for FROM in containerfile so
+            # we can retry on that unfortunately common failure case
+            podman pull ${{ env.FQ_BUILDER_IMAGE }}
+
+      - name: Generate tags
+        id: generate-tags
+        shell: bash
+        run: |
+          # Generate a timestamp for creating an image version history
+          TIMESTAMP="$(date +%Y%m%d)"
+
+          COMMIT_TAGS=()
+          BUILD_TAGS=()
+
+          # Have tags for tracking builds during pull request
+          SHA_SHORT="${GITHUB_SHA::7}"
+          COMMIT_TAGS+=("pr-${{ github.event.number }}-${{ matrix.fedora_version }}")
+          COMMIT_TAGS+=("${SHA_SHORT}-${{ matrix.fedora_version }}")
+
+          BUILD_TAGS=("${{ matrix.fedora_version }}" "${{ matrix.fedora_version }}-${TIMESTAMP}")
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              echo "Generated the following commit tags: "
+              for TAG in "${COMMIT_TAGS[@]}"; do
+                  echo "${TAG}"
+              done
+              default_tag=${COMMIT_TAGS[0]}
+              alias_tags=("${COMMIT_TAGS[@]}")
+          else
+              default_tag=${BUILD_TAGS[0]}
+              alias_tags=("${BUILD_TAGS[@]}")
+          fi
+
+          echo "Generated the following build tags: "
+          for TAG in "${BUILD_TAGS[@]}"; do
+              echo "${TAG}"
+          done
+
+          echo "alias_tags=${alias_tags[*]}" >> $GITHUB_OUTPUT
+          echo "default_tag=$default_tag" >> $GITHUB_ENV
+
+      # Build metadata
+      - name: Image Metadata
+        uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: |
+            ${{ env.IMAGE_NAME }}
+          labels: |
+            org.opencontainers.image.title=${{ env.IMAGE_BASE_NAME }}
+            org.opencontainers.image.description=A caching layer for pre-built NVIDIA kernel modules
+
+      - name: Retrieve Signing Key
+        # if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.event_name == 'merge_group'
+        shell: bash
+        run: |
+          mkdir -p certs
+          if [[ "${{ github.event_name }}"  == 'pull_request' ]]; then
+            echo "This should not have run... exiting..."
+            exit 1
+          else
+            echo "${{ secrets.QUARK_PRIVKEY_18012024 }}" > certs/private_key.priv
+            # DEBUG: get character count of key
+            wc -c certs/private_key.priv
+          fi
+
+      # Build image using Buildah action
+      - name: Build Image
+        id: build_image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          containerfiles: |
+            ./Containerfile.${{ matrix.cfile_suffix }}
+          image: ${{ env.IMAGE_NAME }}
+          tags: |
+            ${{ steps.generate-tags.outputs.alias_tags }}
+          build-args: |
+            BUILDER_IMAGE=${{ env.BUILDER_IMAGE }}
+            FEDORA_MAJOR_VERSION=${{ matrix.fedora_version }}
+            KERNEL_NAME=${{ env.KERNEL_NAME }}
+          labels: ${{ steps.meta.outputs.labels }}
+          oci: false
+
+      # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
+      # https://github.com/macbre/push-to-ghcr/issues/12
+      - name: Lowercase Registry
+        id: registry_case
+        uses: ASzc/change-string-case-action@v6
+        with:
+          string: ${{ env.IMAGE_REGISTRY }}
+
+      - name: Push To GHCR
+        uses: Wandalen/wretry.action@v3.5.0
+        id: push
+        if: github.event_name != 'pull_request'
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ github.token }}
+        with:
+          action: redhat-actions/push-to-registry@v2
+          attempt_limit: 3
+          attempt_delay: 15000
+          with: |
+            image: ${{ steps.build_image.outputs.image }}
+            tags: ${{ steps.build_image.outputs.tags }}
+            registry: ${{ steps.registry_case.outputs.lowercase }}
+            username: ${{ env.REGISTRY_USER }}
+            password: ${{ env.REGISTRY_PASSWORD }}
+            extra-args: |
+              --disable-content-trust
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Sign container
+      # - uses: sigstore/cosign-installer@v3.5.0
+      #   if: github.event_name != 'pull_request'
+
+      # - name: Sign container image
+      #   if: github.event_name != 'pull_request'
+      #   run: |
+      #     cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
+      #   env:
+      #     TAGS: ${{ steps.push.outputs.outputs && fromJSON(steps.push.outputs.outputs).digest }}
+      #     COSIGN_EXPERIMENTAL: false
+      #     COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
+
+      - name: Echo outputs
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ toJSON(steps.push.outputs) }}"
