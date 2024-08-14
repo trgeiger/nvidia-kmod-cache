@@ -1,7 +1,7 @@
 name: build-nvidia-kmods
 on:
   schedule:
-    - cron: '5 2 * * *'  # 2am-ish UTC everyday (timed against official fedora container pushes)
+    - cron: '30 19 * * *' # before quark images
   pull_request:
     branches:
       - main
@@ -31,6 +31,7 @@ jobs:
       fail-fast: false
       matrix:
         fedora_version: [40]
+        nvidia_version: [stable, beta]
         cfile_suffix:
           - nvidia
           - nvidia-open
@@ -77,10 +78,10 @@ jobs:
 
           # Have tags for tracking builds during pull request
           SHA_SHORT="${GITHUB_SHA::7}"
-          COMMIT_TAGS+=("pr-${{ github.event.number }}-${{ matrix.fedora_version }}")
-          COMMIT_TAGS+=("${SHA_SHORT}-${{ matrix.fedora_version }}")
+          COMMIT_TAGS+=("pr-${{ github.event.number }}-${{ matrix.fedora_version }}-${{ matrix.nvidia_version }}")
+          COMMIT_TAGS+=("${SHA_SHORT}-${{ matrix.fedora_version }}-${{ matrix.nvidia_version }}")
 
-          BUILD_TAGS=("${{ matrix.fedora_version }}" "${{ matrix.fedora_version }}-${TIMESTAMP}")
+          BUILD_TAGS=("${{ matrix.fedora_version }}-${{ matrix.nvidia_version }}" "${{ matrix.fedora_version }}-${{ matrix.nvidia_version}}-${TIMESTAMP}")
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
               echo "Generated the following commit tags: "
@@ -141,6 +142,7 @@ jobs:
             BUILDER_IMAGE=${{ env.BUILDER_IMAGE }}
             FEDORA_MAJOR_VERSION=${{ matrix.fedora_version }}
             KERNEL_NAME=${{ env.KERNEL_NAME }}
+            NVIDIA_VERSION=${{ matrix.nvidia_version }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
 

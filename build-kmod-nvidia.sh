@@ -3,7 +3,9 @@
 set -oeux pipefail
 
 RELEASE="$(rpm -E '%fedora.%_arch')"
+MAJOR_VERSION="$(rpm -E '%fedora')"
 KERNEL_MODULE_TYPE="${1:-kernel}"
+NVIDIA_VERSION="${2:-stable}"
 KERNEL_NAME="kernel-cachyos"
 
 cd /tmp
@@ -11,16 +13,12 @@ cd /tmp
 ### Prep
 
 # Install kernel repo
-dnf install -y wget
-wget https://github.com/trgeiger/cpm/releases/download/v1.0.3/cpm -O /usr/bin/cpm && chmod +x /usr/bin/cpm
-cpm enable \
-    bieszczaders/kernel-cachyos
+curl -Lo /etc/yum.repos.d/kernel-cachyos.repo https://copr.fedorainfracloud.org/coprs/bieszczaders/kernel-cachyos/repo/fedora-"${MAJOR_VERSION}"/bieszczaders-kernel-cachyos-fedora-"${MAJOR_VERSION}".repo
 
-# Install RPMFusion
 RPMFUSION_MIRROR_RPMS="https://mirrors.rpmfusion.org"
 dnf install -y \
-    https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm \
-    https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm \
+    https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-"${MAJOR_VERSION}".noarch.rpm \
+    https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-"${MAJOR_VERSION}".noarch.rpm \
     fedora-repos-archive
 
 # Install kernel
@@ -43,8 +41,13 @@ mkdir -p /var/cache/rpms/{kmods}
 
 ### BUILD nvidia
 
-dnf install -y \
-    akmod-nvidia
+if [[ "${NVIDIA_VERSION}" == "beta" ]]; then
+    curl -Lo /etc/yum.repos.d/nvidia-driver-rawhide.repo https://copr.fedorainfracloud.org/coprs/kwizart/nvidia-driver-rawhide/repo/fedora-"${MAJOR_VERSION}"/kwizard-nvidia-driver-rawhide-fedora-"${MAJOR_VERSION}".repo
+    dnf install rpmfusion-nonfree-release-rawhide -y
+    dnf --enablerepo=rpmfusion-nonfree-rawhide install -y akmod-nvidia
+else
+    dnf install -y akmod-nvidia
+fi
 
 # Either successfully build and install the kernel modules, or fail early with debug output
 rpm -qa |grep nvidia

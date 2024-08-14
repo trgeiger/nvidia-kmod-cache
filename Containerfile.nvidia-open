@@ -9,13 +9,14 @@ ARG KERNEL_NAME="${KERNEL_NAME:-kernel-cachyos}"
 FROM ${BUILDER_BASE} AS builder
 
 ARG FEDORA_MAJOR_VERSION="${FEDORA_MAJOR_VERSION:-40}"
+ARG NVIDIA_VERSION="${NVIDIA_VERSION:-stable}"
 
 COPY build-kmod-nvidia.sh /tmp/
 COPY certs /tmp/certs
 
 # files for nvidia
 RUN --mount=type=cache,dst=/var/cache/dnf \
-    /tmp/build-kmod-nvidia.sh kernel-open && \
+    /tmp/build-kmod-nvidia.sh kernel-open "${NVIDIA_VERSION}" && \
     for RPM in $(find /var/cache/akmods/ -type f -name \*.rpm); do \
         cp "${RPM}" /var/cache/rpms/kmods/; \
     done && \
