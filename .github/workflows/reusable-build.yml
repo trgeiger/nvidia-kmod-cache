@@ -81,7 +81,11 @@ jobs:
           COMMIT_TAGS+=("pr-${{ github.event.number }}-${{ matrix.fedora_version }}-${{ matrix.nvidia_version }}")
           COMMIT_TAGS+=("${SHA_SHORT}-${{ matrix.fedora_version }}-${{ matrix.nvidia_version }}")
 
-          BUILD_TAGS=("${{ matrix.fedora_version }}-${{ matrix.nvidia_version }}" "${{ matrix.fedora_version }}-${{ matrix.nvidia_version}}-${TIMESTAMP}")
+          if [[ ${{ github.ref_name }} == "testing" ]]; then
+             BUILD_TAGS=("${{ matrix.fedora_version }}-${{ matrix.nvidia_version }}-testing" "${{ matrix.fedora_version }}-${{ matrix.nvidia_version}}-testing-${TIMESTAMP}")
+          else
+             BUILD_TAGS=("${{ matrix.fedora_version }}-${{ matrix.nvidia_version }}" "${{ matrix.fedora_version }}-${{ matrix.nvidia_version}}-${TIMESTAMP}")
+          fi
 
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
               echo "Generated the following commit tags: "
