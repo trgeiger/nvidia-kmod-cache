@@ -13,7 +13,7 @@ on:
 env:
   IMAGE_BASE_NAME: nvidia-kmod
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
-  KERNEL_NAME: kernel-cachyos
+  KERNEL_NAME: kernel
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.fedora_version }}

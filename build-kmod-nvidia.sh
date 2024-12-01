@@ -6,14 +6,14 @@ RELEASE="$(rpm -E '%fedora.%_arch')"
 MAJOR_VERSION="$(rpm -E '%fedora')"
 KERNEL_MODULE_TYPE="${1:-kernel}"
 NVIDIA_VERSION="${2:-stable}"
-KERNEL_NAME="kernel-cachyos"
+KERNEL_NAME="kernel"
 
 cd /tmp
 
 ### Prep
 
 # Install kernel repo
-curl -Lo /etc/yum.repos.d/kernel-cachyos.repo https://copr.fedorainfracloud.org/coprs/bieszczaders/kernel-cachyos/repo/fedora-"${MAJOR_VERSION}"/bieszczaders-kernel-cachyos-fedora-"${MAJOR_VERSION}".repo
+# curl -Lo /etc/yum.repos.d/kernel-cachyos.repo https://copr.fedorainfracloud.org/coprs/bieszczaders/kernel-cachyos/repo/fedora-"${MAJOR_VERSION}"/bieszczaders-kernel-cachyos-fedora-"${MAJOR_VERSION}".repo
 
 RPMFUSION_MIRROR_RPMS="https://mirrors.rpmfusion.org"
 dnf install -y \
@@ -23,8 +23,8 @@ dnf install -y \
 
 # Install kernel
 dnf install -y \
-    kernel-cachyos \
-    kernel-cachyos-devel-matched
+    kernel \
+    kernel-devel-matched
 
 # Install build reqs
 dnf install -y \
