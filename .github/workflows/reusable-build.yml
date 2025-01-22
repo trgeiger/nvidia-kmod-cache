@@ -13,7 +13,7 @@ on:
 env:
   IMAGE_BASE_NAME: nvidia-kmod
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
-  KERNEL_NAME: kernel-cachyos
+  KERNEL_NAME: kernel-cachyos-lts
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.fedora_version }}
@@ -32,9 +32,7 @@ jobs:
       matrix:
         fedora_version: [41]
         nvidia_version: [stable, beta]
-        cfile_suffix:
-          - nvidia
-          - nvidia-open
+        module_type: [kernel, kernel-open]
 
     steps:
       # Checkout push-to-registry action GitHub repository
@@ -44,7 +42,11 @@ jobs:
       - name: Matrix Variables
         shell: bash
         run: |
-          echo "IMAGE_NAME=${{ env.IMAGE_BASE_NAME }}-${{ matrix.cfile_suffix }}" >> $GITHUB_ENV
+          SUFFIX=nvidia
+          if [[ ${{ matrix.module_type }} == "kernel-open" ]]; then
+            SUFFIX=$SUFFIX-open
+          fi
+          echo "IMAGE_NAME=${{ env.IMAGE_BASE_NAME }}-$SUFFIX" >> $GITHUB_ENV
           export BUILDER_IMAGE=quay.io/fedora/fedora
           echo "BUILDER_IMAGE=${BUILDER_IMAGE}" >> $GITHUB_ENV
           echo "FQ_BUILDER_IMAGE=${BUILDER_IMAGE}:${{ matrix.fedora_version }}" >> $GITHUB_ENV
@@ -138,7 +140,7 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           containerfiles: |
-            ./Containerfile.${{ matrix.cfile_suffix }}
+            ./Containerfile
           image: ${{ env.IMAGE_NAME }}
           tags: |
             ${{ steps.generate-tags.outputs.alias_tags }}
@@ -146,6 +148,7 @@ jobs:
             BUILDER_IMAGE=${{ env.BUILDER_IMAGE }}
             FEDORA_MAJOR_VERSION=${{ matrix.fedora_version }}
             KERNEL_NAME=${{ env.KERNEL_NAME }}
+            KERNEL_MODULE_TYPE=${{ matrix.module_type }}
             NVIDIA_VERSION=${{ matrix.nvidia_version }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
