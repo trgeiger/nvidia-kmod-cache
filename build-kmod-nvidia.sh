@@ -42,10 +42,12 @@ mkdir -p /var/cache/rpms/{kmods}
 ### BUILD nvidia
 
 if [[ "${NVIDIA_VERSION}" == "beta" ]]; then
-    curl -Lo /etc/yum.repos.d/nvidia-driver-rawhide.repo https://copr.fedorainfracloud.org/coprs/kwizart/nvidia-driver-rawhide/repo/fedora-"${MAJOR_VERSION}"/kwizart-nvidia-driver-rawhide-fedora-"${MAJOR_VERSION}".repo
+    # curl -Lo /etc/yum.repos.d/nvidia-driver-rawhide.repo https://copr.fedorainfracloud.org/coprs/kwizart/nvidia-driver-rawhide/repo/fedora-"${MAJOR_VERSION}"/kwizart-nvidia-driver-rawhide-fedora-"${MAJOR_VERSION}".repo
+    # dnf install rpmfusion-nonfree-release-rawhide -y
+    # dnf --enablerepo=rpmfusion-nonfree-rawhide install -y akmod-nvidia
+    dnf -y config-manager addrepo --from-repofile=https://developer.download.nvidia.com/compute/cuda/repos/fedora${MAJOR_VERSION}/x86_64/cuda-fedora${MAJOR_VERSION}.repo
     sed -i '0,/enabled=0/s//enabled=1/' /etc/yum.repos.d/fedora-updates-testing.repo
-    dnf install rpmfusion-nonfree-release-rawhide -y
-    dnf --enablerepo=rpmfusion-nonfree-rawhide install -y akmod-nvidia
+    dnf --enablerepo=tayler-nvidia,cuda-fedora41-x86_64 install -y akmod-nvidia
 else
     dnf install -y akmod-nvidia
 fi
