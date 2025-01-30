@@ -1,0 +1,5 @@
+[tayler-nvidia]
+name=NVIDIA beta override
+baseurl=https://filedn.com/ldJMkp18B3QJKvJJaukrBzH/repo/nvidia/releases/$releasever/$basearch
+enabled=1
+gpgcheck=0
