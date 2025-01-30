@@ -14,7 +14,6 @@ ARG KERNEL_MODULE_TYPE="${KERNEL_MODULE_TYPE:-kernel-open}"
 
 COPY build-kmod-nvidia.sh /tmp/
 COPY certs /tmp/certs
-COPY etc etc
 
 # files for nvidia
 RUN --mount=type=cache,dst=/var/cache/dnf \

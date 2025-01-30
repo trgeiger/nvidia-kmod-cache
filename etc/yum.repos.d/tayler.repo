@@ -1,5 +1,0 @@
-[tayler-nvidia]
-name=Personal nvidia
-baseurl=https://filedn.com/ldJMkp18B3QJKvJJaukrBzH/repo/nvidia/releases/$releasever/$basearch
-enabled=0
-gpgcheck=0
