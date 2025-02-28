@@ -47,9 +47,6 @@ jobs:
           if [[ ${{ matrix.module_type }} == "kernel-open" ]]; then
             SUFFIX=$SUFFIX-open
           fi
-          if [[ ${{ matrix.nvidia_version }} == "stable" ]]; then
-            echo KERNEL_NAME=$KERNEL_NAME-lts >> $GITHUB_ENV
-          fi
           echo "IMAGE_NAME=${{ env.IMAGE_BASE_NAME }}-$SUFFIX" >> $GITHUB_ENV
           export BUILDER_IMAGE=quay.io/fedora/fedora
           echo "BUILDER_IMAGE=${BUILDER_IMAGE}" >> $GITHUB_ENV
