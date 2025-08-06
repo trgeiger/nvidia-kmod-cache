@@ -43,12 +43,13 @@ mkdir -p /var/cache/rpms/{kmods}
 ### BUILD nvidia
 
 if [[ "${NVIDIA_VERSION}" == "beta" ]]; then
+    curl -Lo /etc/yum.repos.d/nvidia-driver-rawhide.repo https://copr.fedorainfracloud.org/coprs/kwizart/nvidia-driver-rawhide/repo/fedora-"${MAJOR_VERSION}"/kwizart-nvidia-driver-rawhide-fedora-"${MAJOR_VERSION}".repo
     if [[ "${USE_PERSONAL_REPO}" == "true" ]]; then
         curl -Lo /etc/yum.repos.d/tayler-nvidia.repo https://raw.githubusercontent.com/trgeiger/nvidia-kmod-cache/refs/heads/main/tayler-nvidia.repo
         sed -i '0,/enabled=0/s//enabled=1/' /etc/yum.repos.d/fedora-updates-testing.repo
         dnf install -y akmod-nvidia
     else
-        curl -Lo /etc/yum.repos.d/nvidia-driver-rawhide.repo https://copr.fedorainfracloud.org/coprs/kwizart/nvidia-driver-rawhide/repo/fedora-"${MAJOR_VERSION}"/kwizart-nvidia-driver-rawhide-fedora-"${MAJOR_VERSION}".repo
+        # curl -Lo /etc/yum.repos.d/nvidia-driver-rawhide.repo https://copr.fedorainfracloud.org/coprs/kwizart/nvidia-driver-rawhide/repo/fedora-"${MAJOR_VERSION}"/kwizart-nvidia-driver-rawhide-fedora-"${MAJOR_VERSION}".repo
         sed -i '0,/enabled=0/s//enabled=1/' /etc/yum.repos.d/fedora-updates-testing.repo
         dnf install rpmfusion-nonfree-release-rawhide -y
         dnf --enablerepo=rpmfusion-nonfree-rawhide install -y akmod-nvidia
