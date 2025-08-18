@@ -34,6 +34,9 @@ jobs:
         fedora_version: [42, 43]
         nvidia_version: [stable, beta]
         module_type: [kernel, kernel-open]
+        exclude:
+         - nvidia_version: beta
+           fedora_version: 43
 
     steps:
       # Checkout push-to-registry action GitHub repository
