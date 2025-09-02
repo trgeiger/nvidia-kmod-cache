@@ -14,7 +14,7 @@ env:
   IMAGE_BASE_NAME: nvidia-kmod
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   KERNEL_NAME: kernel-cachyos
-  PERSONAL_REPO_OVERRIDE: false
+  PERSONAL_REPO_OVERRIDE: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.fedora_version }}
@@ -34,9 +34,9 @@ jobs:
         fedora_version: [42, 43]
         nvidia_version: [stable, beta]
         module_type: [kernel, kernel-open]
-        exclude:
-         - nvidia_version: beta
-           fedora_version: 43
+        # exclude:
+        #  - nvidia_version: beta
+        #    fedora_version: 43
 
     steps:
       # Checkout push-to-registry action GitHub repository
