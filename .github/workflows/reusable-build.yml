@@ -14,7 +14,7 @@ env:
   IMAGE_BASE_NAME: nvidia-kmod
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
   KERNEL_NAME: kernel-cachyos
-  PERSONAL_REPO_OVERRIDE: true
+  PERSONAL_REPO_OVERRIDE: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.fedora_version }}
