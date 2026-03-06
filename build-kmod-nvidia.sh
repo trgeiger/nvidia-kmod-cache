@@ -22,6 +22,8 @@ dnf install -y \
     https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-"${MAJOR_VERSION}".noarch.rpm \
     fedora-repos-archive
 
+dnf update -y
+
 # Install kernel
 dnf install -y \
     "${KERNEL_NAME}" \
